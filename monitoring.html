@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Quality Monitoring - Grafik</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .chart-container {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            height: 80vh;
+        }
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        h1 {
+            color: #2c3e50;
+            margin: 0;
+            font-size: 24px;
+        }
+        .chart-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .chart-controls button,
+        .chart-controls select {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .chart-controls select {
+            background-color: white;
+            color: #2c3e50;
+            border: 1px solid #ccc;
+        }
+        .chart-controls button:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="chart-container">
+        <div class="chart-header">
+            <h1>Water Quality Monitoring</h1>
+            <div class="chart-controls">
+                <button id="reset-zoom">Reset Zoom</button>
+                <select id="tanggal-selector">
+                    <option value="">Pilih Tanggal</option>
+                </select>
+                <button id="load-history">Lihat Histori</button>
+            </div>
+        </div>
+        <canvas id="combined-chart"></canvas>
+    </div>
+
+    <!-- Firebase & Chart.js -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAgghYae8Ckw_GEsfUslIZpOzv91JvApdU",
+            databaseURL: "https://sistem-monitoring-dan-ko-9bc9f-default-rtdb.firebaseio.com/"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        const resetZoomBtn = document.getElementById('reset-zoom');
+        const tanggalSelector = document.getElementById('tanggal-selector');
+        const loadHistoryBtn = document.getElementById('load-history');
+
+        const ctx = document.getElementById('combined-chart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    {
+                        label: 'Suhu (°C)',
+                        data: [],
+                        borderColor: '#e74c3c',
+                        backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        yAxisID: 'y',
+                        fill: true
+                    },
+                    {
+                        label: 'pH',
+                        data: [],
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        yAxisID: 'y1',
+                        fill: true
+                    },
+                    {
+                        label: 'Salinitas (ppm)',
+                        data: [],
+                        borderColor: '#2ecc71',
+                        backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        yAxisID: 'y2',
+                        fill: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Waktu',
+                            color: '#7f8c8d'
+                        },
+                        grid: {
+                            color: 'rgba(0,0,0,0.05)'
+                        }
+                    },
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Suhu (°C)',
+                            color: '#e74c3c'
+                        },
+                        grid: {
+                            color: 'rgba(0,0,0,0.05)'
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'pH',
+                            color: '#3498db'
+                        },
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    },
+                    y2: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Salinitas (ppm)',
+                            color: '#2ecc71'
+                        },
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    }
+                },
+                plugins: {
+                    zoom: {
+                        zoom: {
+                            wheel: {
+                                enabled: true
+                            },
+                            pinch: {
+                                enabled: true
+                            },
+                            mode: 'xy'
+                        },
+                        pan: {
+                            enabled: true,
+                            mode: 'xy'
+                        }
+                    },
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0,0,0,0.7)',
+                        titleFont: {
+                            size: 14
+                        },
+                        bodyFont: {
+                            size: 12
+                        },
+                        padding: 12,
+                        usePointStyle: true
+                    }
+                }
+            }
+        });
+
+        function formatTime(date) {
+            return `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}:${date.getSeconds().toString().padStart(2, '0')}`;
+        }
+
+        // Ambil data realtime saat ini
+        database.ref('Data').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                const now = new Date();
+                const timeLabel = formatTime(now);
+
+                if (chart.data.labels.length > 50) {
+                    chart.data.labels.shift();
+                    chart.data.datasets.forEach(dataset => dataset.data.shift());
+                }
+
+                chart.data.labels.push(timeLabel);
+                chart.data.datasets[0].data.push(data.Suhu);
+                chart.data.datasets[1].data.push(data.pH);
+                chart.data.datasets[2].data.push(data.Salinitas);
+                chart.update();
+            }
+        });
+
+        // Reset zoom
+        resetZoomBtn.addEventListener('click', () => {
+            chart.resetZoom();
+        });
+
+        // Ambil daftar tanggal histori dari Firebase
+        database.ref('Histori').once('value').then(snapshot => {
+            const data = snapshot.val();
+            if (data) {
+                const tanggalList = Object.keys(data).sort().reverse();
+                tanggalList.forEach(tgl => {
+                    const option = document.createElement('option');
+                    option.value = tgl;
+                    option.textContent = tgl;
+                    tanggalSelector.appendChild(option);
+                });
+            }
+        });
+
+        // Load histori sesuai tanggal terpilih
+        loadHistoryBtn.addEventListener('click', () => {
+            const selectedDate = tanggalSelector.value;
+            if (!selectedDate) return;
+
+            database.ref(`Histori/${selectedDate}`).once('value').then(snapshot => {
+                const data = snapshot.val();
+                if (data) {
+                    chart.data.labels = [];
+                    chart.data.datasets.forEach(dataset => dataset.data = []);
+
+                    const jamList = Object.keys(data).sort();
+                    jamList.forEach(jam => {
+                        const entry = data[jam];
+                        chart.data.labels.push(jam);
+                        chart.data.datasets[0].data.push(entry.Suhu || 0);
+                        chart.data.datasets[1].data.push(entry.pH || 0);
+                        chart.data.datasets[2].data.push(entry.Salinitas || 0);
+                    });
+
+                    chart.update();
+                } else {
+                    alert("Data histori tidak ditemukan untuk tanggal ini.");
+                }
+            });
+        });
+    </script>
+</body>
+</html>
